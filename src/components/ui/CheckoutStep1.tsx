@@ -10,7 +10,14 @@ const schema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
 });
 
-export default function CheckoutStep1({ onNext }: { onNext: (data: any) => void }) {
+// Definindo um tipo para os dados do formulário
+type CheckoutStep1Data = {
+  name: string;
+  email: string;
+  value: number;
+};
+
+export default function CheckoutStep1({ onNext }: { onNext: (data: CheckoutStep1Data) => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<{ name?: string[]; email?: string[] }>({});

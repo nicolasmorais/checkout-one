@@ -2,8 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createPix } from '@/lib/pushinpay';
 import { z } from 'zod';
-import fs from 'fs/promises';
-import path from 'path';
+import { kv } from '@vercel/kv';
 
 // Schema para validar o corpo da requisição
 const requestSchema = z.object({
@@ -13,7 +12,7 @@ const requestSchema = z.object({
 });
 
 // Define o tipo para uma transação
-interface Transaction {
+export interface Transaction {
   id: string;
   name: string;
   email: string;
@@ -21,9 +20,6 @@ interface Transaction {
   date: string;
   status: string;
 }
-
-// Caminho para o nosso "banco de dados"
-const dbPath = path.join(process.cwd(), 'data', 'db.json');
 
 export async function POST(request: Request) {
   try {
@@ -49,11 +45,9 @@ export async function POST(request: Request) {
       status: pixData.status, // 'created', 'paid', etc.
     };
 
-    // 3. Salva a transação no db.json
-    const dbData = await fs.readFile(dbPath, 'utf-8');
-    const dbJson = JSON.parse(dbData);
-    dbJson.transactions.unshift(newTransaction); // Adiciona no início do array
-    await fs.writeFile(dbPath, JSON.stringify(dbJson, null, 2));
+    // 3. Salva a transação no Vercel KV
+    await kv.set(`txn:${newTransaction.id}`, newTransaction);
+    await kv.lpush('transactions', newTransaction.id);
 
 
     // 4. Retorna o QR Code para o cliente
@@ -62,8 +56,9 @@ export async function POST(request: Request) {
       transactionId: pixData.id 
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro na rota /api/generate-qr-code:", error);
-    return NextResponse.json({ error: "Não foi possível gerar o QR Code.", message: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro desconhecido.";
+    return NextResponse.json({ error: "Não foi possível gerar o QR Code.", message: errorMessage }, { status: 500 });
   }
 }

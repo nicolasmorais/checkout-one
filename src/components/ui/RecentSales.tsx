@@ -3,15 +3,8 @@
 
 import { useState } from 'react';
 import { checkTransactionStatus } from '@/app/actions';
+import type { Transaction } from '@/app/api/generate-qr-code/route';
 
-interface Transaction {
-  id: string;
-  name: string;
-  email: string;
-  value: number;
-  date: string;
-  status: string;
-}
 
 // Props para o componente, que receberá as transações iniciais
 interface RecentSalesProps {
@@ -50,19 +43,15 @@ function StatusBadge({ status }: { status: string }) {
 
 
 export default function RecentSales({ initialTransactions }: RecentSalesProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handleCheckStatus = async (transactionId: string) => {
     setLoadingId(transactionId);
     const result = await checkTransactionStatus(transactionId);
-    if (result.success) {
-      // A revalidação do path vai cuidar de atualizar a UI,
-      // mas podemos forçar uma atualização local se quisermos.
-      // A abordagem com revalidatePath é mais robusta.
-    } else {
+    if (!result.success) {
         alert(result.message);
     }
+    // O revalidatePath cuidará de atualizar a UI, então não precisamos de estado local
     setLoadingId(null);
   };
 
@@ -82,7 +71,7 @@ export default function RecentSales({ initialTransactions }: RecentSalesProps) {
             </tr>
           </thead>
           <tbody>
-            {transactions.map((sale) => (
+            {initialTransactions.map((sale) => (
               <tr key={sale.id} className="border-b hover:bg-gray-50">
                 <td className="py-3 px-4 text-sm text-gray-700 font-mono truncate" style={{ maxWidth: '100px' }}>{sale.id}</td>
                 <td className="py-3 px-4 text-sm text-gray-700">
@@ -105,7 +94,7 @@ export default function RecentSales({ initialTransactions }: RecentSalesProps) {
                 </td>
               </tr>
             ))}
-             {transactions.length === 0 && (
+             {initialTransactions.length === 0 && (
                 <tr>
                     <td colSpan={6} className="text-center py-8 text-gray-500">
                         Nenhuma venda recente encontrada.

@@ -6,14 +6,26 @@ import CheckoutStep1 from '@/components/ui/CheckoutStep1';
 import CheckoutStep2 from '@/components/ui/CheckoutStep2';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
+// Definindo os tipos que serão usados na página
+type CheckoutData = {
+    name: string;
+    email: string;
+    value: number;
+};
+
+type QrCodeData = {
+    qrCode: string;
+    transactionId: string;
+};
+
 export default function CheckoutPage() {
   const [step, setStep] = useState(1);
-  const [qrCodeData, setQrCodeData] = useState<{ qrCode: string; transactionId: string } | null>(null);
+  const [qrCodeData, setQrCodeData] = useState<QrCodeData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
 
-  const handleNextStep = async (data: any) => {
+  const handleNextStep = async (data: CheckoutData) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -26,16 +38,20 @@ export default function CheckoutPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData: { message?: string } = await response.json();
         throw new Error(errorData.message || "Falha ao gerar o QR Code.");
       }
 
-      const result = await response.json();
+      const result: QrCodeData = await response.json();
       setQrCodeData(result);
       setStep(2);
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Ocorreu um erro desconhecido.");
+      }
       // Permanece no Passo 1 para que o usuário possa ver o erro
     } finally {
       setIsLoading(false);

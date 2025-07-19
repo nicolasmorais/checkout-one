@@ -3,36 +3,23 @@
 
 import { revalidatePath } from 'next/cache';
 import { consultarPix } from '@/lib/pushinpay';
-import fs from 'fs/promises';
-import path from 'path';
+import { kv } from '@vercel/kv';
+import type { Transaction } from './app/api/generate-qr-code/route';
 
-interface Transaction {
-    id: string;
-    name: string;
-    email: string;
-    value: number;
-    date: string;
-    status: string;
-}
-
-const dbPath = path.join(process.cwd(), 'data', 'db.json');
 
 export async function checkTransactionStatus(transactionId: string) {
     try {
         const pixData = await consultarPix(transactionId);
 
         if (pixData) {
-            // Ler o banco de dados
-            const dbData = await fs.readFile(dbPath, 'utf-8');
-            const dbJson = JSON.parse(dbData);
+            // Busca a transação existente no KV
+            const transaction = await kv.get<Transaction>(`txn:${transactionId}`);
 
-            // Encontrar e atualizar a transação
-            const transactionIndex = dbJson.transactions.findIndex((t: Transaction) => t.id === transactionId);
-
-            if (transactionIndex > -1) {
-                dbJson.transactions[transactionIndex].status = pixData.status;
-                // Salvar as alterações
-                await fs.writeFile(dbPath, JSON.stringify(dbJson, null, 2));
+            if (transaction) {
+                // Atualiza o status
+                transaction.status = pixData.status;
+                // Salva a transação atualizada de volta no KV
+                await kv.set(`txn:${transactionId}`, transaction);
             }
         }
 
