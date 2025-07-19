@@ -1,8 +1,12 @@
 // src/app/dashboard/page.tsx
+
+// Força a página a ser renderizada dinamicamente, evitando erros de build em produção
+export const dynamic = 'force-dynamic';
+
 import { BarChart, DollarSign, ShoppingBag, User } from "lucide-react";
 import RecentSales from "@/components/ui/RecentSales";
 import { kv } from '@vercel/kv';
-import type { Transaction } from './api/generate-qr-code/route';
+import type { Transaction } from '../api/generate-qr-code/route';
 
 
 // Função para buscar os dados e calcular as estatísticas do Vercel KV
@@ -19,7 +23,7 @@ async function getDashboardStats() {
         const transactions = await kv.mget<Transaction[]>(...transactionIds.map(id => `txn:${id}`));
 
         // Filtra qualquer resultado nulo (caso uma transação tenha sido deletada)
-        const validTransactions = transactions.filter(t => t !== null);
+        const validTransactions = transactions.filter((t): t is Transaction => t !== null);
 
         // 1. Calcular Vendas Totais (apenas transações pagas)
         const totalSales = validTransactions
