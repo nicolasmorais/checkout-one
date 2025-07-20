@@ -3,8 +3,10 @@
 
 import { useState } from 'react';
 import { z } from 'zod';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { createTransactionAndGeneratePix } from '@/app/actions';
+import type { Transaction } from '@/lib/types';
 
 // Schema de validação
 const schema = z.object({
@@ -12,33 +14,45 @@ const schema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
 });
 
-// Tipos
-type CheckoutStep1Data = {
-  name: string;
-  email: string;
-  value: number;
-};
-
 // Props
 interface CheckoutStep1Props {
-    onNext: (data: CheckoutStep1Data) => void;
+    onNext: (data: Transaction) => void;
 }
 
 export default function CheckoutStep1({ onNext }: CheckoutStep1Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [errors, setErrors] = useState<{ name?: string[]; email?: string[] }>({});
+  const [errors, setErrors] = useState<{ name?: string[]; email?: string[]; server?: string; }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = schema.safeParse({ name, email });
+    setErrors({});
+    setIsSubmitting(true);
 
-    if (result.success) {
-      // Valor fixo de 150 centavos (R$ 1,50)
-      onNext({ name, email, value: 150 });
-      setErrors({});
+    const validationResult = schema.safeParse({ name, email });
+
+    if (!validationResult.success) {
+      setErrors(validationResult.error.flatten().fieldErrors);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const customerData = {
+        customerName: name,
+        customerEmail: email,
+        productName: "Acesso Exclusivo – Plano Vitalício",
+        amount: 1.50, // Valor fixo
+    };
+
+    const result = await createTransactionAndGeneratePix(customerData);
+
+    setIsSubmitting(false);
+
+    if (result.success && result.transaction) {
+      onNext(result.transaction);
     } else {
-      setErrors(result.error.flatten().fieldErrors);
+      setErrors({ server: result.message || "Não foi possível processar seu pedido. Tente novamente." });
     }
   };
 
@@ -73,6 +87,7 @@ export default function CheckoutStep1({ onNext }: CheckoutStep1Props) {
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: Maria Oliveira Silva"
             className={`w-full px-4 py-2 border rounded-md bg-gray-50 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+            disabled={isSubmitting}
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>}
         </div>
@@ -85,12 +100,25 @@ export default function CheckoutStep1({ onNext }: CheckoutStep1Props) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="email@exemplo.com"
             className={`w-full px-4 py-2 border rounded-md bg-gray-50 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+            disabled={isSubmitting}
           />
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email[0]}</p>}
         </div>
-        <button type="submit" className="w-full bg-green-500 text-white py-3 rounded-md hover:bg-green-600 transition-colors duration-300 font-semibold flex items-center justify-center">
-          Ir para pagamento
-          <ArrowRight className="ml-2 h-5 w-5" />
+
+        {errors.server && <p className="text-red-500 text-sm text-center mb-4">{errors.server}</p>}
+
+        <button type="submit" className="w-full bg-green-500 text-white py-3 rounded-md hover:bg-green-600 transition-colors duration-300 font-semibold flex items-center justify-center disabled:bg-green-400" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Processando...
+            </>
+          ) : (
+            <>
+              Ir para pagamento
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </>
+          )}
         </button>
       </form>
 

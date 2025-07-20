@@ -1,17 +1,15 @@
 // src/lib/pushinpay.ts
+
 import { z } from 'zod';
 
 const PUSHINPAY_API_URL = process.env.PUSHINPAY_API_URL;
 const PUSHINPAY_API_TOKEN = process.env.PUSHINPAY_API_TOKEN;
 
-// Schema para a resposta da criação de PIX (mais estrito)
+// Schema para a RESPOSTA da criação de PIX
 const createPixResponseSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  value: z.number(),
-  qr_code: z.string(),
-  qr_code_base64: z.string(),
-  // ... outros campos que podem ser obrigatórios na criação
+  transactionID: z.string(),
+  qrCode: z.string(),
+  link: z.string(),
 });
 
 // Schema específico e mais flexível para a resposta da CONSULTA de PIX
@@ -31,72 +29,74 @@ const consultPixResponseSchema = z.object({
 /**
  * Cria uma cobrança PIX na Pushin Pay.
  */
-export async function createPix(value: number) {
+export async function criarPix({ valor, pagador }: { valor: number, pagador: { nome: string, email: string, cpf: string } }) {
   if (!PUSHINPAY_API_URL || !PUSHINPAY_API_TOKEN) {
     throw new Error('As variáveis de ambiente da Pushin Pay não foram configuradas.');
   }
-
-  const response = await fetch(`${PUSHINPAY_API_URL}/api/pix/cashIn`, {
+  
+  const response = await fetch(`${PUSHINPAY_API_URL}/pix`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${PUSHINPAY_API_TOKEN}`,
-      'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${PUSHINPAY_API_TOKEN}`,
     },
-    body: JSON.stringify({ value }),
+    body: JSON.stringify({
+      value: valor,
+      payer: {
+        name: pagador.nome,
+        email: pagador.email,
+        national_registration: pagador.cpf,
+      }
+    }),
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(`Erro da API de Pagamento (${response.status}): ${errorBody.message || 'Erro desconhecido'}`);
+    const errorBody = await response.text();
+    console.error(`Erro da API Pushin Pay: ${response.status}`, errorBody);
+    throw new Error(`Falha ao criar cobrança PIX. Status: ${response.status}`);
   }
 
   const data = await response.json();
-  const validatedData = createPixResponseSchema.safeParse(data);
-
-  if (!validatedData.success) {
-      console.error("Erro de validação (createPix):", validatedData.error.issues);
-      throw new Error("A resposta da API (createPix) tem um formato inesperado.");
-  }
-  return validatedData.data;
+  const validatedData = createPixResponseSchema.parse(data);
+  return validatedData;
 }
+
 
 /**
  * Consulta o status de uma transação PIX.
  */
 export async function consultarPix(transactionId: string) {
-    if (!PUSHINPAY_API_URL || !PUSHINPAY_API_TOKEN) {
-        throw new Error('As variáveis de ambiente da Pushin Pay não foram configuradas.');
-    }
+  if (!PUSHINPAY_API_URL || !PUSHINPAY_API_TOKEN) {
+    throw new Error('As variáveis de ambiente da Pushin Pay não foram configuradas.');
+  }
 
-    const response = await fetch(`${PUSHINPAY_API_URL}/api/transactions/${transactionId}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${PUSHINPAY_API_TOKEN}`,
-            'Accept': 'application/json',
-        },
+  try {
+    const response = await fetch(`${PUSHINPAY_API_URL}/pix/${transactionId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${PUSHINPAY_API_TOKEN}`,
+      },
     });
 
-    // Tratamento específico para 404, como manda a documentação
     if (response.status === 404) {
-        console.log(`Transação ${transactionId} não encontrada (404).`);
-        return null; // Retorna null se não encontrado
+      console.log(`Transação ${transactionId} não encontrada na API Pushin Pay.`);
+      return null;
     }
-
+    
     if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(`Erro da API de Pagamento (${response.status}): ${errorBody.message || 'Erro desconhecido'}`);
+        const errorBody = await response.text();
+        console.error(`Erro da API Pushin Pay ao consultar: ${response.status}`, errorBody);
+        throw new Error(`Falha ao consultar transação PIX. Status: ${response.status}`);
     }
 
     const data = await response.json();
-    // Usa o novo schema, específico para a consulta
-    const validatedData = consultPixResponseSchema.safeParse(data);
-
-    if (!validatedData.success) {
-        console.error("Erro de validação (consultarPix):", validatedData.error.issues);
-        // Este é o erro que você estava vendo.
-        throw new Error("A resposta da API (consultarPix) não corresponde ao esperado.");
+    const validatedData = consultPixResponseSchema.parse(data);
+    return validatedData;
+  } catch (error) {
+    console.error("Erro ao consultar PIX:", error);
+    if (error instanceof z.ZodError) {
+      console.error("Erro de validação Zod:", error.issues);
     }
-
-    return validatedData.data;
+    throw error;
+  }
 }
