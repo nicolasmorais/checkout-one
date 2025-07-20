@@ -7,11 +7,11 @@ const PUSHINPAY_API_TOKEN = process.env.PUSHINPAY_API_TOKEN;
 // Schema para validar a resposta da API
 const pixResponseSchema = z.object({
   id: z.string(),
-  qr_code: z.string().nullable().optional(), // Nullable no GET
+  qr_code: z.string().nullable().optional(),
   status: z.string(),
   value: z.number(),
   webhook_url: z.string().nullable(),
-  qr_code_base64: z.string().nullable().optional(), // Nullable no GET
+  qr_code_base64: z.string().nullable().optional(),
   webhook: z.string().nullable(),
   split_rules: z.array(z.any()),
   end_to_end_id: z.string().nullable(),
@@ -21,8 +21,6 @@ const pixResponseSchema = z.object({
 
 /**
  * Cria uma cobrança PIX na Pushin Pay.
- * @param value O valor da cobrança em centavos.
- * @returns Os dados do PIX gerado.
  */
 export async function createPix(value: number) {
   if (!PUSHINPAY_API_URL || !PUSHINPAY_API_TOKEN) {
@@ -41,9 +39,9 @@ export async function createPix(value: number) {
     });
 
     if (!response.ok) {
-      const errorBody = await response.json();
-      console.error("Erro da API Pushin Pay (createPix):", errorBody);
-      throw new Error(`Erro ao criar PIX: ${response.statusText}`);
+      const errorBody = await response.json().catch(() => ({ message: "Não foi possível ler o corpo do erro." }));
+      console.error("Erro da API Pushin Pay (createPix):", { status: response.status, body: errorBody });
+      throw new Error(`Erro da API de Pagamento (${response.status}): ${errorBody.message || response.statusText}`);
     }
 
     const data = await response.json();
@@ -57,15 +55,16 @@ export async function createPix(value: number) {
     return validatedData.data;
 
   } catch (error) {
-    console.error("Erro na comunicação com a Pushin Pay (createPix):", error);
-    throw new Error("Não foi possível se comunicar com a API de pagamento.");
+    console.error("Erro final em createPix:", error);
+    if (error instanceof Error) {
+        throw error;
+    }
+    throw new Error("Ocorreu um erro desconhecido ao criar o PIX.");
   }
 }
 
 /**
  * Consulta o status de uma transação PIX.
- * @param transactionId O ID da transação.
- * @returns Os dados da transação.
  */
 export async function consultarPix(transactionId: string) {
     if (!PUSHINPAY_API_URL || !PUSHINPAY_API_TOKEN) {
@@ -82,14 +81,10 @@ export async function consultarPix(transactionId: string) {
             },
         });
 
-        if (response.status === 404) {
-            return null; // Transação não encontrada
-        }
-
         if (!response.ok) {
-            const errorBody = await response.json();
-            console.error("Erro da API Pushin Pay (consultarPix):", errorBody);
-            throw new Error(`Erro ao consultar PIX: ${response.statusText}`);
+            const errorBody = await response.json().catch(() => ({ message: "Não foi possível ler o corpo do erro." }));
+            console.error("Erro da API Pushin Pay (consultarPix):", { status: response.status, body: errorBody });
+            throw new Error(`Erro da API de Pagamento (${response.status}): ${errorBody.message || response.statusText}`);
         }
 
         const data = await response.json();
@@ -103,7 +98,10 @@ export async function consultarPix(transactionId: string) {
         return validatedData.data;
 
     } catch (error) {
-        console.error("Erro na comunicação com a Pushin Pay (consultarPix):", error);
-        throw new Error("Não foi possível se comunicar com a API de pagamento.");
+        console.error("Erro final em consultarPix:", error);
+        if (error instanceof Error) {
+            throw error; 
+        }
+        throw new Error("Ocorreu um erro desconhecido na comunicação com a API de pagamento.");
     }
 }
