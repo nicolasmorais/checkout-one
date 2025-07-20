@@ -18,7 +18,8 @@ export default function Sidebar() {
             </Link>
           </li>
           <li className="mb-4">
-            <Link href="/checkout" className="flex items-center p-4 text-lg text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mx-4 transition-all duration-300 glow-link">
+            {/* Link atualizado para apontar para a raiz ("/") */}
+            <Link href="/" className="flex items-center p-4 text-lg text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg mx-4 transition-all duration-300 glow-link">
               <ShoppingCart className="mr-4 h-6 w-6 text-green-400" />
               Checkout
             </Link>

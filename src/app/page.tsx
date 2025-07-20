@@ -1,70 +1,95 @@
-// src/app/page.tsx
-import Link from 'next/link';
+// src/app/page.tsx (Anteriormente /checkout/page.tsx)
+"use client";
 
-export default function HomePage() {
+import { useState } from 'react';
+import CheckoutStep1 from '@/components/ui/CheckoutStep1';
+import CheckoutStep2 from '@/components/ui/CheckoutStep2';
+import CheckoutHeader from '@/components/ui/CheckoutHeader';
+import Testimonials from '@/components/ui/Testimonials';
+import CheckoutFooter from '@/components/ui/CheckoutFooter';
+import { Loader2 } from 'lucide-react';
+
+// Tipos
+type CheckoutData = {
+    name: string;
+    email: string;
+    value: number;
+};
+
+type QrCodeData = {
+    qrCode: string;
+    transactionId: string;
+};
+
+export default function HomePage() { // Renomeado de CheckoutPage para HomePage
+  const [step, setStep] = useState(1);
+  const [qrCodeData, setQrCodeData] = useState<QrCodeData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleNextStep = async (data: CheckoutData) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/generate-qr-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData: { message?: string } = await response.json();
+        throw new Error(errorData.message || "Falha ao gerar o QR Code.");
+      }
+
+      const result: QrCodeData = await response.json();
+      setQrCodeData(result);
+      setStep(2);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/vercel.svg" alt="Vercel Logo" className="dark:invert" width={100} height={24} />
-          </a>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+      <CheckoutHeader />
+      <main className="w-full flex-grow flex flex-col items-center justify-center p-4 md:p-6">
+        
+        {/* Etapa 1: Formulário e Depoimentos */}
+        {step === 1 && (
+          <>
+            <div className="w-full max-w-lg">
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center bg-white p-8 rounded-lg shadow-lg h-96">
+                        <Loader2 className="h-12 w-12 animate-spin text-green-500" />
+                        <p className="mt-4 text-gray-700 font-semibold">Gerando seu PIX, aguarde...</p>
+                    </div>
+                ) : (
+                    <CheckoutStep1 onNext={handleNextStep} />
+                )}
+                 {error && (
+                    <div className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md text-center">
+                        <span className="font-bold">Erro:</span> {error}
+                    </div>
+                )}
+            </div>
+            {!isLoading && <Testimonials />}
+          </>
+        )}
 
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-        />
-      </div>
+        {/* Etapa 2: QR Code */}
+        {step === 2 && qrCodeData && (
+          <div className="w-full max-w-lg">
+            <CheckoutStep2 qrCodeData={qrCodeData} />
+          </div>
+        )}
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <Link
-          href="/dashboard"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Dashboard{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Go to the dashboard page.
-          </p>
-        </Link>
-
-        <Link
-          href="/checkout"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Checkout{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Go to the checkout page.
-          </p>
-        </Link>
-      </div>
-    </main>
+      </main>
+      <CheckoutFooter />
+    </div>
   );
 }

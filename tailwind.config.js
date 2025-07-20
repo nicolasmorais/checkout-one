@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        // Define 'General Sans' como a fonte padrão para a classe 'font-sans'
+        // Garante que a classe 'font-sans' use a General Sans
         sans: ['"General Sans"', 'sans-serif'],
       },
     },
