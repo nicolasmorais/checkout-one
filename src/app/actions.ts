@@ -4,7 +4,7 @@
 import { revalidatePath } from 'next/cache';
 import { consultarPix } from '@/lib/pushinpay';
 import { kv } from '@vercel/kv';
-import type { Transaction } from '@/lib/types'; // <-- CORRIGIDO para usar o arquivo central
+import type { Transaction } from '@/lib/types';
 
 
 export async function checkTransactionStatus(transactionId: string) {
@@ -12,24 +12,23 @@ export async function checkTransactionStatus(transactionId: string) {
         const pixData = await consultarPix(transactionId);
 
         if (pixData) {
-            // Busca a transação existente no KV
             const transaction = await kv.get<Transaction>(`txn:${transactionId}`);
 
             if (transaction) {
-                // Atualiza o status
                 transaction.status = pixData.status;
-                // Salva a transação atualizada de volta no KV
                 await kv.set(`txn:${transactionId}`, transaction);
             }
         }
 
-        // Revalida a página do dashboard para mostrar o status atualizado
         revalidatePath('/dashboard');
         
         return { success: true, newStatus: pixData?.status || 'unknown' };
 
     } catch (error) {
-        console.error("Erro ao verificar status da transação:", error);
-        return { success: false, message: "Falha ao verificar o status." };
+        console.error("Erro detalhado ao verificar status da transação:", error);
+        
+        // Captura a mensagem de erro específica e a retorna para o cliente.
+        const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro desconhecido.";
+        return { success: false, message: errorMessage };
     }
 }
