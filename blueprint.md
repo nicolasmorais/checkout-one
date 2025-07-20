@@ -8,27 +8,30 @@ This project is a Next.js application that provides a two-step checkout process 
 
 ### Implemented Features
 
-*   **Two-Step Checkout:**
-    *   **Step 1:** Collects user's name, email, and payment amount.
-    *   **Step 2:** Generates a real PIX QR code for payment via Pushin Pay.
-*   **Dashboard:**
-    *   A simple dashboard page with styled cards.
-    *   A modern, fixed sidebar with navigation links.
-*   **Routing & Styling:**
-    *   `/checkout`, `/dashboard` routes.
-    *   Styled with Tailwind CSS and `lucide-react` for icons.
-*   **Validation:**
-    *   Client-side validation for the checkout form.
+*   **PIX Payment Integration:** Generates real PIX QR codes via Pushin Pay.
+*   **Dynamic Dashboard:** Displays real-time statistics and a list of recent sales from a Vercel KV database.
+*   **Live Status Check:** Allows real-time checking of PIX payment status.
 
-### Current Plan: Add "Recent Sales" to Dashboard
+### Current Plan: Redesign Checkout Page
 
-1.  **Simulate Database:**
-    *   Create a `db.json` file to store transaction data.
-2.  **Save Transactions:**
-    *   After a PIX is created, save the transaction details (ID, name, email, value, date) to `db.json`.
-3.  **Implement PIX Status Query:**
-    *   Add a `consultarPIX` function to the `pushinpay.ts` module.
-4.  **Create `RecentSales` Component:**
-    *   Build a new component to display recent sales in a table on the dashboard.
-5.  **Automatic Status Check:**
-    *   The `RecentSales` component will trigger status checks for transactions.
+**Objective:** Replicate the provided design screenshot exactly.
+
+1.  **Top Bar:**
+    *   Implement a green top bar with a countdown timer.
+2.  **Main Form Card:**
+    *   Recreate the white card layout.
+    *   Add the "One Conversion" logo.
+    *   Display "Acesso Exclusivo - Plano Vitalício" with the price of R$ 1,50.
+    *   Style the "Nome Completo" and "Email" input fields to match the design.
+    *   Style the main green call-to-action button ("Ir para pagamento").
+    *   Add the "Ambiente seguro" text with a shield icon.
+    *   **Update payment value to 150 cents.**
+3.  **Testimonials Section:**
+    *   Create a "O que nossos clientes dizem" section.
+    *   Implement testimonial cards with avatars, names, star ratings, and text.
+4.  **Footer Section:**
+    *   Create a custom footer for the checkout page.
+    *   Include company details (CNPJ).
+    *   Include a "Pagamento Seguro" block with a lock icon.
+5.  **Componentization:**
+    *   Break down the new design into clean, reusable components.
