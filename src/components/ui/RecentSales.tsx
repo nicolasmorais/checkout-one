@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { checkTransactionStatus } from '@/app/actions';
-import type { Transaction } from '@/app/api/generate-qr-code/route';
+import type { Transaction } from '@/lib/types'; // <-- CORRIGIDO para usar o arquivo central
 
 
 // Props para o componente, que receberá as transações iniciais
@@ -11,7 +11,7 @@ interface RecentSalesProps {
     initialTransactions: Transaction[];
 }
 
-// ... (Funções de formatação e StatusBadge permanecem as mesmas)
+// Funções de formatação e StatusBadge
 function formatCurrency(valueInCents: number) {
     return (valueInCents / 100).toLocaleString('pt-BR', {
       style: 'currency',
@@ -48,10 +48,9 @@ export default function RecentSales({ initialTransactions }: RecentSalesProps) {
   const handleCheckStatus = async (transactionId: string) => {
     setLoadingId(transactionId);
     const result = await checkTransactionStatus(transactionId);
-    if (!result.success) {
+    if (!result.success && result.message) {
         alert(result.message);
     }
-    // O revalidatePath cuidará de atualizar a UI, então não precisamos de estado local
     setLoadingId(null);
   };
 

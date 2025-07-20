@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createPix } from '@/lib/pushinpay';
 import { z } from 'zod';
 import { kv } from '@vercel/kv';
+import type { Transaction } from '@/lib/types'; // <-- CORRIGIDO para usar o arquivo central
 
 // Schema para validar o corpo da requisição
 const requestSchema = z.object({
@@ -10,16 +11,6 @@ const requestSchema = z.object({
   email: z.string().email(),
   value: z.number().min(50),
 });
-
-// Define o tipo para uma transação
-export interface Transaction {
-  id: string;
-  name: string;
-  email: string;
-  value: number;
-  date: string;
-  status: string;
-}
 
 export async function POST(request: Request) {
   try {

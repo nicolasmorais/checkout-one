@@ -4,8 +4,7 @@
 import { revalidatePath } from 'next/cache';
 import { consultarPix } from '@/lib/pushinpay';
 import { kv } from '@vercel/kv';
-// CORREÇÃO: O caminho da importação estava errado.
-import type { Transaction } from '@/app/api/generate-qr-code/route';
+import type { Transaction } from '@/lib/types'; // <-- CORRIGIDO para usar o arquivo central
 
 
 export async function checkTransactionStatus(transactionId: string) {
